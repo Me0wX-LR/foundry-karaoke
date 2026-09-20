@@ -48,7 +48,6 @@ export class KaraokeManager extends HandlebarsApplicationMixin(ApplicationV2) {
   static PARTS = {
     body: {
       template: `modules/${MODULE_ID}/templates/manager.hbs`,
-      root: true,
       scrollable: [".fk-track-list"]
     }
   };
@@ -91,6 +90,7 @@ export class KaraokeManager extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRender(context, options) {
     await super._onRender?.(context, options);
+    constrainAppToViewport(this);
     const search = this.element.querySelector('[name="query"]');
     if (search) {
       search.value = this.query;
@@ -172,7 +172,7 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       resizable: true,
       contentClasses: ["standard-form"]
     },
-    position: { width: 780, height: Math.min(760, Math.max(480, (globalThis.innerHeight ?? 900) - 48)) },
+    position: { width: 780, height: 720 },
     actions: {
       pickFontFile: this.onPickFontFile,
       setLocation: this.onSetLocation,
@@ -193,8 +193,7 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   static PARTS = {
     body: {
       template: `modules/${MODULE_ID}/templates/editor.hbs`,
-      root: true,
-      scrollable: [""]
+      scrollable: [".fk-editor-scroll"]
     }
   };
 
@@ -262,8 +261,7 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRender(context, options) {
     await super._onRender?.(context, options);
-    const maxHeight = Math.max(420, (globalThis.innerHeight ?? 900) - 40);
-    if ((this.position.height ?? 0) > maxHeight) this.setPosition({ height: maxHeight });
+    constrainAppToViewport(this, { scroll: ".fk-editor-scroll" });
     this.bindLivePreview();
     this.bindStageDrag();
     this.startPlayhead();
@@ -566,6 +564,42 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     ui.notifications.info(localize("Saved"));
     if (options.close) return this.close();
     return this.render({ force: true });
+  }
+}
+
+function constrainAppToViewport(app, { scroll } = {}) {
+  const el = app.element;
+  if (!el) return;
+  const cap = Math.max(400, (globalThis.innerHeight ?? 900) - 36);
+  const nextHeight = Math.min(app.position.height || 720, cap);
+  if ((app.position.height ?? 0) !== nextHeight) app.setPosition({ height: nextHeight });
+  el.style.maxHeight = `${cap}px`;
+  el.style.height = `${nextHeight}px`;
+  el.style.overflow = "hidden";
+  const content = el.querySelector(".window-content") || app.window?.content;
+  if (content) {
+    content.style.display = "flex";
+    content.style.flexDirection = "column";
+    content.style.flex = "1 1 auto";
+    content.style.minHeight = "0";
+    content.style.overflow = "hidden";
+  }
+  const editor = el.querySelector(".fk-editor") || el.querySelector(".fk-manager");
+  if (editor) {
+    editor.style.display = "flex";
+    editor.style.flexDirection = "column";
+    editor.style.flex = "1 1 auto";
+    editor.style.minHeight = "0";
+    editor.style.overflow = "hidden";
+    editor.style.height = "100%";
+  }
+  const scroller = (scroll && el.querySelector(scroll)) || content;
+  if (scroller) {
+    scroller.style.flex = "1 1 auto";
+    scroller.style.minHeight = "0";
+    scroller.style.maxHeight = "100%";
+    scroller.style.overflowX = "hidden";
+    scroller.style.overflowY = "auto";
   }
 }
 

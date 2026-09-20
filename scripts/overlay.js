@@ -21,6 +21,7 @@ class KaraokeOverlay {
   #root = null;
   #box = null;
   #bar = null;
+  #restore = null;
   #prev = null;
   #current = null;
   #next = null;
@@ -29,6 +30,7 @@ class KaraokeOverlay {
   #previewDisplay = null;
   #previewLines = null;
   #track = null;
+  #barHidden = false;
 
   mount() {
     if (this.#root?.isConnected) return;
@@ -58,16 +60,29 @@ class KaraokeOverlay {
           <select data-role="secondary"></select>
         </label>
         <button type="button" data-action="swap">${localize("SwapLanguages")}</button>
+        <button type="button" class="fk-lang-bar-close" data-action="dismiss" aria-label="${localize("CloseLangBar")}" title="${localize("CloseLangBar")}">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
+      <button type="button" class="fk-lang-bar-restore fk-hidden" data-action="restore" title="${localize("OpenLangBar")}">
+        <i class="fa-solid fa-language"></i>
+        ${localize("OpenLangBar")}
+      </button>
     `;
     document.body.appendChild(this.#root);
     this.#box = this.#root.querySelector(".fk-lyric-box");
     this.#bar = this.#root.querySelector(".fk-lang-bar");
+    this.#restore = this.#root.querySelector(".fk-lang-bar-restore");
     this.#prev = this.#root.querySelector(".fk-prev");
     this.#current = this.#root.querySelector(".fk-current");
     this.#next = this.#root.querySelector(".fk-next");
-    this.#bar.addEventListener("change", this.#onBarChange);
-    this.#bar.addEventListener("click", this.#onBarClick);
+    this.#root.addEventListener("change", this.#onBarChange);
+    this.#root.addEventListener("click", this.#onBarClick);
+    try {
+      this.#barHidden = game.settings.get(MODULE_ID, "showLangBar") === false;
+    } catch {
+      this.#barHidden = false;
+    }
     this.#loop();
   }
 
@@ -184,9 +199,14 @@ class KaraokeOverlay {
   #syncBar(track, roles) {
     if (!this.#bar) return;
     const languages = track?.languages ?? [];
-    const show = game.settings.get(MODULE_ID, "showLangBar") !== false && languages.length > 1 && !this.#root.classList.contains("fk-hidden");
-    this.#bar.classList.toggle("fk-hidden", !show);
-    if (!show || !roles) return;
+    const overlayOn = !this.#root.classList.contains("fk-hidden");
+    const multi = languages.length > 1;
+    const settingOn = !this.#barHidden;
+    const showBar = overlayOn && multi && settingOn;
+    const showRestore = overlayOn && multi && !settingOn;
+    this.#bar.classList.toggle("fk-hidden", !showBar);
+    this.#restore?.classList.toggle("fk-hidden", !showRestore);
+    if (!showBar || !roles) return;
     const mainSelect = this.#bar.querySelector('select[data-role="main"]');
     const secondarySelect = this.#bar.querySelector('select[data-role="secondary"]');
     fillSelect(mainSelect, languages, roles.mainId, false);
@@ -208,8 +228,29 @@ class KaraokeOverlay {
   };
 
   #onBarClick = (event) => {
-    const button = event.target.closest("[data-action='swap']");
-    if (!button || !this.#track) return;
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const action = button.dataset.action;
+    if (action === "dismiss") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.#barHidden = true;
+      this.#bar?.classList.add("fk-hidden");
+      this.#restore?.classList.remove("fk-hidden");
+      game.settings.set(MODULE_ID, "showLangBar", false);
+      return;
+    }
+    if (action === "restore") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.#barHidden = false;
+      this.#restore?.classList.add("fk-hidden");
+      this.#bar?.classList.remove("fk-hidden");
+      game.settings.set(MODULE_ID, "showLangBar", true);
+      this.#tick();
+      return;
+    }
+    if (action !== "swap" || !this.#track) return;
     swapClientLanguages(this.#track);
     this.#tick();
   };
@@ -228,6 +269,7 @@ class KaraokeOverlay {
   #hide() {
     this.#root?.classList.add("fk-hidden");
     this.#bar?.classList.add("fk-hidden");
+    this.#restore?.classList.add("fk-hidden");
   }
 }
 
