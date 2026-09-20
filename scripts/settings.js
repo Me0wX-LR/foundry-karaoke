@@ -79,6 +79,20 @@ export function registerSettings() {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "langBarLeft", {
+    scope: "client",
+    config: false,
+    type: Number,
+    default: -1
+  });
+
+  game.settings.register(MODULE_ID, "langBarTop", {
+    scope: "client",
+    config: false,
+    type: Number,
+    default: -1
+  });
+
   game.settings.registerMenu(MODULE_ID, "manager", {
     name: "KARAOKE.OpenManager",
     label: "KARAOKE.OpenManagerLabel",

@@ -26,7 +26,7 @@ Typical Windows user data path:
 3. Enable karaoke for that track.
 4. Set **font type** (Foundry fonts, Google families, custom CSS family, or an uploaded `.ttf` / `.otf` / `.woff2`).
 5. Set **location** with presets (top / center / bottom / …) or drag the sample lyric on the stage. X/Y are percent of the screen.
-6. Add **languages** (Traditional Chinese, Japanese, English, …). Set **Main language** (large) and **Secondary language** (smaller, on top). During playback a language bar appears on the table; close it with **X**, or bring it back with **Language options**.
+6. Add **languages** (Traditional Chinese, Japanese, English, …). Set **Main language** (large) and **Secondary language** (smaller, on top). During playback a language bar appears on the table. Drag the **grip** to move it, **−** to minimize it to a small icon, then drag that icon anywhere. Click the icon to expand.
 7. Choose whether **previous** and **next** lines appear for this track. Each player can also hide those lines in Configure Settings.
 8. Save, then play the playlist sound. Timed lines appear on the table for connected clients.
 
@@ -192,7 +192,7 @@ Pair lines across languages with the same LRC timestamp, such as `[00:12.00]`.
 | Show previous line | Client | Hide the previous lyric locally |
 | Show next line | Client | Hide the next lyric locally |
 | Show secondary language | Client | Hide the smaller top line locally |
-| Show language toggle | Client | Show Main / Secondary dropdowns on the table |
+| Show language toggle | Client | Show the full language bar; otherwise a small draggable icon |
 
 ## API
 

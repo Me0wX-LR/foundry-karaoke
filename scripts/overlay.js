@@ -31,6 +31,9 @@ class KaraokeOverlay {
   #previewLines = null;
   #track = null;
   #barHidden = false;
+  #pos = { left: null, top: null };
+  #drag = null;
+  #ignoreRestoreClick = false;
 
   mount() {
     if (this.#root?.isConnected) return;
@@ -53,6 +56,9 @@ class KaraokeOverlay {
         </div>
       </div>
       <div class="fk-lang-bar">
+        <button type="button" class="fk-lang-bar-grip" data-drag="lang" title="${localize("DragLangBar")}" aria-label="${localize("DragLangBar")}">
+          <i class="fa-solid fa-grip-vertical"></i>
+        </button>
         <label>${localize("MainLanguage")}
           <select data-role="main"></select>
         </label>
@@ -60,13 +66,12 @@ class KaraokeOverlay {
           <select data-role="secondary"></select>
         </label>
         <button type="button" data-action="swap">${localize("SwapLanguages")}</button>
-        <button type="button" class="fk-lang-bar-close" data-action="dismiss" aria-label="${localize("CloseLangBar")}" title="${localize("CloseLangBar")}">
-          <i class="fa-solid fa-xmark"></i>
+        <button type="button" class="fk-lang-bar-close" data-action="dismiss" aria-label="${localize("MinimizeLangBar")}" title="${localize("MinimizeLangBar")}">
+          <i class="fa-solid fa-minus"></i>
         </button>
       </div>
-      <button type="button" class="fk-lang-bar-restore fk-hidden" data-action="restore" title="${localize("OpenLangBar")}">
+      <button type="button" class="fk-lang-bar-restore fk-hidden" data-action="restore" data-drag="lang" title="${localize("OpenLangBar")}" aria-label="${localize("OpenLangBar")}">
         <i class="fa-solid fa-language"></i>
-        ${localize("OpenLangBar")}
       </button>
     `;
     document.body.appendChild(this.#root);
@@ -78,17 +83,24 @@ class KaraokeOverlay {
     this.#next = this.#root.querySelector(".fk-next");
     this.#root.addEventListener("change", this.#onBarChange);
     this.#root.addEventListener("click", this.#onBarClick);
+    this.#root.addEventListener("pointerdown", this.#onBarPointerDown);
     try {
       this.#barHidden = game.settings.get(MODULE_ID, "showLangBar") === false;
+      const left = Number(game.settings.get(MODULE_ID, "langBarLeft"));
+      const top = Number(game.settings.get(MODULE_ID, "langBarTop"));
+      this.#pos = left >= 0 && top >= 0 ? { left, top } : { left: null, top: null };
     } catch {
       this.#barHidden = false;
+      this.#pos = { left: null, top: null };
     }
+    this.#applyBarPosition();
     this.#loop();
   }
 
   unmount() {
     cancelAnimationFrame(this.#raf);
     this.#raf = 0;
+    this.#endDrag();
     this.#root?.remove();
     this.#root = null;
   }
@@ -206,11 +218,94 @@ class KaraokeOverlay {
     const showRestore = overlayOn && multi && !settingOn;
     this.#bar.classList.toggle("fk-hidden", !showBar);
     this.#restore?.classList.toggle("fk-hidden", !showRestore);
+    this.#applyBarPosition();
     if (!showBar || !roles) return;
     const mainSelect = this.#bar.querySelector('select[data-role="main"]');
     const secondarySelect = this.#bar.querySelector('select[data-role="secondary"]');
     fillSelect(mainSelect, languages, roles.mainId, false);
     fillSelect(secondarySelect, languages, roles.secondaryId || "off", true);
+  }
+
+  #applyBarPosition() {
+    const moved = this.#pos.left != null && this.#pos.top != null;
+    for (const el of [this.#bar, this.#restore]) {
+      if (!el) continue;
+      el.classList.toggle("fk-lang-moved", moved);
+      if (!moved) {
+        el.style.left = "";
+        el.style.top = "";
+        continue;
+      }
+      el.style.left = `${this.#pos.left}%`;
+      el.style.top = `${this.#pos.top}%`;
+    }
+  }
+
+  #onBarPointerDown = (event) => {
+    if (event.button != null && event.button !== 0) return;
+    const grip = event.target.closest("[data-drag='lang']");
+    if (!grip) return;
+    if (event.target.closest("select, option")) return;
+    const el = event.target.closest(".fk-lang-bar-restore") || this.#bar;
+    if (!el || el.classList.contains("fk-hidden")) return;
+    if (!el.classList.contains("fk-lang-bar-restore")) event.preventDefault();
+    const rect = el.getBoundingClientRect();
+    this.#drag = {
+      el,
+      dx: event.clientX - rect.left,
+      dy: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+      isMini: el.classList.contains("fk-lang-bar-restore")
+    };
+    el.classList.add("fk-lang-dragging");
+    el.setPointerCapture?.(event.pointerId);
+    window.addEventListener("pointermove", this.#onBarPointerMove);
+    window.addEventListener("pointerup", this.#onBarPointerUp);
+    window.addEventListener("pointercancel", this.#onBarPointerUp);
+  };
+
+  #onBarPointerMove = (event) => {
+    if (!this.#drag) return;
+    const dist = Math.hypot(event.clientX - this.#drag.startX, event.clientY - this.#drag.startY);
+    if (dist > 5) this.#drag.moved = true;
+    if (!this.#drag.moved) return;
+    const vw = window.innerWidth || 1;
+    const vh = window.innerHeight || 1;
+    const size = this.#drag.el.getBoundingClientRect();
+    const leftPx = Math.max(8, Math.min(vw - size.width - 8, event.clientX - this.#drag.dx));
+    const topPx = Math.max(8, Math.min(vh - size.height - 8, event.clientY - this.#drag.dy));
+    this.#pos = {
+      left: (leftPx / vw) * 100,
+      top: (topPx / vh) * 100
+    };
+    this.#applyBarPosition();
+  };
+
+  #onBarPointerUp = () => {
+    if (!this.#drag) return;
+    if (this.#drag.isMini && this.#drag.moved) this.#ignoreRestoreClick = true;
+    this.#endDrag();
+    this.#savePos();
+  };
+
+  #endDrag() {
+    this.#drag?.el?.classList.remove("fk-lang-dragging");
+    this.#drag = null;
+    window.removeEventListener("pointermove", this.#onBarPointerMove);
+    window.removeEventListener("pointerup", this.#onBarPointerUp);
+    window.removeEventListener("pointercancel", this.#onBarPointerUp);
+  }
+
+  #savePos() {
+    if (this.#pos.left == null || this.#pos.top == null) return;
+    try {
+      game.settings.set(MODULE_ID, "langBarLeft", this.#pos.left);
+      game.settings.set(MODULE_ID, "langBarTop", this.#pos.top);
+    } catch {
+      /* settings not ready */
+    }
   }
 
   #onBarChange = (event) => {
@@ -237,12 +332,17 @@ class KaraokeOverlay {
       this.#barHidden = true;
       this.#bar?.classList.add("fk-hidden");
       this.#restore?.classList.remove("fk-hidden");
+      this.#applyBarPosition();
       game.settings.set(MODULE_ID, "showLangBar", false);
       return;
     }
     if (action === "restore") {
       event.preventDefault();
       event.stopPropagation();
+      if (this.#ignoreRestoreClick) {
+        this.#ignoreRestoreClick = false;
+        return;
+      }
       this.#barHidden = false;
       this.#restore?.classList.add("fk-hidden");
       this.#bar?.classList.remove("fk-hidden");
