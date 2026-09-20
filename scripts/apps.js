@@ -172,7 +172,7 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       resizable: true,
       contentClasses: ["standard-form"]
     },
-    position: { width: 780, height: 760 },
+    position: { width: 780, height: Math.min(760, Math.max(480, (globalThis.innerHeight ?? 900) - 48)) },
     actions: {
       pickFontFile: this.onPickFontFile,
       setLocation: this.onSetLocation,
@@ -262,6 +262,8 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRender(context, options) {
     await super._onRender?.(context, options);
+    const maxHeight = Math.max(420, (globalThis.innerHeight ?? 900) - 40);
+    if ((this.position.height ?? 0) > maxHeight) this.setPosition({ height: maxHeight });
     this.bindLivePreview();
     this.bindStageDrag();
     this.startPlayhead();

@@ -65,6 +65,20 @@
   margin: 0;
 }
 
+.application.foundry-karaoke.fk-editor-app {
+  max-height: calc(100vh - 2rem);
+}
+
+.application.foundry-karaoke.fk-editor-app .window-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .fk-manager,
 .fk-editor {
   display: flex;
@@ -253,8 +267,10 @@
   justify-content: flex-end;
   position: sticky;
   bottom: 0;
-  background: var(--background-color, transparent);
-  padding-top: 0.35rem;
+  z-index: 2;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0 0.15rem;
+  background: var(--background, var(--color-cool-5, #1e1e24));
 }
 
 .fk-directory-button {
