@@ -1,0 +1,122 @@
+<section class="fk-editor">
+  <header class="fk-editor-head">
+    <div>
+      <div class="fk-kicker">{{playlistName}}</div>
+      <h3>{{soundName}}</h3>
+    </div>
+    <label class="fk-check">
+      <input type="checkbox" name="enabled" {{checked enabled}} />
+      {{localize "KARAOKE.Enabled"}}
+    </label>
+  </header>
+
+  <fieldset class="fk-panel">
+    <legend>{{localize "KARAOKE.Appearance"}}</legend>
+    <div class="fk-grid-2">
+      <div class="fk-col">
+        <label>{{localize "KARAOKE.FontPreset"}}
+          <select name="fontPreset">
+            {{#each fontPresets}}
+            <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+        </label>
+        <label class="fk-custom-font {{#unless isCustomFont}}hidden{{/unless}}">{{localize "KARAOKE.CustomFamily"}}
+          <input type="text" name="customFamily" value="{{display.customFamily}}" placeholder='"My Font", serif' />
+        </label>
+        <div class="fk-file-font {{#unless isFileFont}}hidden{{/unless}}">
+          <label>{{localize "KARAOKE.FontFile"}}
+            <input type="text" name="fontFile" value="{{display.fontFile}}" />
+          </label>
+          <button type="button" data-action="pickFontFile">
+            <i class="fa-solid fa-folder-open"></i> {{localize "KARAOKE.PickFontFile"}}
+          </button>
+        </div>
+        <div class="fk-inline">
+          <label>{{localize "KARAOKE.FontSize"}}
+            <input type="number" name="fontSize" min="12" max="160" step="1" value="{{display.fontSize}}" />
+          </label>
+          <label>{{localize "KARAOKE.MaxWidth"}}
+            <input type="number" name="maxWidth" min="20" max="100" step="1" value="{{display.maxWidth}}" />
+          </label>
+        </div>
+        <div class="fk-inline">
+          <label>{{localize "KARAOKE.FontColor"}}
+            <input type="color" name="fontColor" value="{{display.fontColor}}" />
+          </label>
+          <label>{{localize "KARAOKE.HighlightColor"}}
+            <input type="color" name="highlightColor" value="{{display.highlightColor}}" />
+          </label>
+        </div>
+        <div class="fk-inline">
+          <label>{{localize "KARAOKE.OutlineColor"}}
+            <input type="color" name="outlineColor" value="{{display.outlineColor}}" />
+          </label>
+          <label>{{localize "KARAOKE.OutlineWidth"}}
+            <input type="number" name="outlineWidth" min="0" max="12" step="1" value="{{display.outlineWidth}}" />
+          </label>
+        </div>
+        <label>{{localize "KARAOKE.TextAlign"}}
+          <select name="textAlign">
+            <option value="left" {{#if alignLeft}}selected{{/if}}>{{localize "KARAOKE.AlignLeft"}}</option>
+            <option value="center" {{#if alignCenter}}selected{{/if}}>{{localize "KARAOKE.AlignCenter"}}</option>
+            <option value="right" {{#if alignRight}}selected{{/if}}>{{localize "KARAOKE.AlignRight"}}</option>
+          </select>
+        </label>
+      </div>
+      <div class="fk-col">
+        <div class="fk-location-label">{{localize "KARAOKE.LocationPreset"}}</div>
+        <input type="hidden" name="locationPreset" value="{{display.locationPreset}}" />
+        <div class="fk-location-presets">
+          {{#each locationPresets}}
+          <button type="button" class="{{#if selected}}active{{/if}}" data-action="setLocation" data-location="{{id}}">{{label}}</button>
+          {{/each}}
+        </div>
+        <div class="fk-inline">
+          <label>{{localize "KARAOKE.PosX"}}
+            <input type="number" name="x" min="0" max="100" step="0.5" value="{{display.x}}" />
+          </label>
+          <label>{{localize "KARAOKE.PosY"}}
+            <input type="number" name="y" min="0" max="100" step="0.5" value="{{display.y}}" />
+          </label>
+        </div>
+        <div class="fk-stage" title="{{localize "KARAOKE.StageHint"}}">
+          <div class="fk-stage-lyric">{{localize "KARAOKE.SampleCurrent"}}</div>
+        </div>
+        <p class="notes">{{localize "KARAOKE.StageHint"}}</p>
+        <label class="fk-check">
+          <input type="checkbox" name="showPrevious" {{checked display.showPrevious}} />
+          {{localize "KARAOKE.ShowPrevious"}}
+        </label>
+        <label class="fk-check">
+          <input type="checkbox" name="showNext" {{checked display.showNext}} />
+          {{localize "KARAOKE.ShowNext"}}
+        </label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="fk-panel">
+    <legend>{{localize "KARAOKE.Lyrics"}}</legend>
+    <div class="fk-lyric-tools">
+      <button type="button" data-action="playTrack"><i class="fa-solid fa-play"></i> {{localize "KARAOKE.PlayTrack"}}</button>
+      <button type="button" data-action="stopTrack"><i class="fa-solid fa-stop"></i> {{localize "KARAOKE.StopTrack"}}</button>
+      <button type="button" data-action="stamp"><i class="fa-solid fa-stopwatch"></i> {{localize "KARAOKE.Stamp"}}</button>
+      <span>{{localize "KARAOKE.Playhead"}}: <code class="fk-playhead">00:00.00</code></span>
+      <span class="fk-meta">{{cueCountLabel}}</span>
+    </div>
+    <label class="fk-lrc">
+      <span>{{localize "KARAOKE.LrcLabel"}}</span>
+      <textarea name="lrc" rows="12" spellcheck="true">{{lrc}}</textarea>
+    </label>
+    <p class="notes">{{localize "KARAOKE.LrcHint"}}</p>
+  </fieldset>
+
+  <footer class="fk-footer">
+    <button type="button" data-action="importTrack"><i class="fa-solid fa-file-import"></i> {{localize "KARAOKE.ImportTrack"}}</button>
+    <button type="button" data-action="exportTrack"><i class="fa-solid fa-file-export"></i> {{localize "KARAOKE.ExportTrack"}}</button>
+    <button type="button" data-action="previewTable"><i class="fa-solid fa-tv"></i> {{localize "KARAOKE.PreviewTable"}}</button>
+    <button type="submit"><i class="fa-solid fa-floppy-disk"></i> {{localize "KARAOKE.Save"}}</button>
+    <button type="button" data-action="saveClose"><i class="fa-solid fa-check"></i> {{localize "KARAOKE.SaveClose"}}</button>
+  </footer>
+</section>

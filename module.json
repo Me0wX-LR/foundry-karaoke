@@ -1,0 +1,34 @@
+{
+  "id": "foundry-karaoke",
+  "title": "Foundry Karaoke",
+  "description": "Add karaoke lyrics to selected Foundry playlist tracks. Pick font and on-screen location, then import or export the pack as JSON.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Dies Irae"
+    }
+  ],
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/karaoke.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "license": "LICENSE",
+  "readme": "README.md",
+  "url": "",
+  "manifest": "",
+  "download": ""
+}

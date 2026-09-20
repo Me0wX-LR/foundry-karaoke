@@ -1,0 +1,53 @@
+<section class="fk-manager">
+  <header class="fk-toolbar">
+    <label class="fk-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" name="query" value="{{query}}" placeholder="{{localize "KARAOKE.Search"}}" />
+    </label>
+    <label class="fk-check">
+      <input type="checkbox" name="karaokeOnly" data-action="filterKaraoke" {{checked karaokeOnly}} />
+      {{localize "KARAOKE.KaraokeOnly"}}
+    </label>
+    <div class="fk-toolbar-actions">
+      <button type="button" data-action="importJson">
+        <i class="fa-solid fa-file-import"></i> {{localize "KARAOKE.ImportJson"}}
+      </button>
+      <button type="button" data-action="exportAll">
+        <i class="fa-solid fa-file-export"></i> {{localize "KARAOKE.ExportAll"}}
+      </button>
+    </div>
+  </header>
+
+  {{#if empty}}
+  <p class="notes">{{localize "KARAOKE.NoPlaylists"}}</p>
+  {{else if noMatches}}
+  <p class="notes">{{localize "KARAOKE.NoMatches"}}</p>
+  {{else}}
+  <div class="fk-track-list">
+    {{#each playlists}}
+    <article class="fk-playlist" data-name="{{name}}">
+      <h3><i class="fa-solid fa-music"></i> {{name}}</h3>
+      <ol>
+        {{#each sounds}}
+        <li class="fk-sound {{#if hasData}}has-karaoke{{/if}}" data-name="{{name}}" data-has-karaoke="{{hasData}}">
+          <div class="fk-sound-name">
+            {{#if hasData}}<i class="fa-solid fa-microphone-lines" title="{{localize "KARAOKE.On"}}"></i>{{/if}}
+            <span>{{name}}</span>
+            {{#if hasData}}<span class="fk-meta">{{cueCount}} {{localize "KARAOKE.Cues"}}</span>{{/if}}
+          </div>
+          <div class="fk-sound-actions">
+            <button type="button" data-action="toggleEnabled" data-uuid="{{uuid}}">
+              {{#if enabled}}{{localize "KARAOKE.On"}}{{else}}{{localize "KARAOKE.Off"}}{{/if}}
+            </button>
+            <button type="button" data-action="editTrack" data-uuid="{{uuid}}">
+              <i class="fa-solid fa-pen-to-square"></i> {{localize "KARAOKE.Edit"}}
+            </button>
+          </div>
+        </li>
+        {{/each}}
+      </ol>
+    </article>
+    {{/each}}
+  </div>
+  {{/if}}
+</section>

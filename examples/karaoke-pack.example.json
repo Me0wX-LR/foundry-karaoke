@@ -1,0 +1,37 @@
+{
+  "schema": "foundry-karaoke",
+  "version": 1,
+  "exportedAt": "2026-09-20T13:00:00.000Z",
+  "tracks": [
+    {
+      "playlistId": "",
+      "playlistName": "Tavern Songs",
+      "soundId": "",
+      "soundName": "Never Gonna Give You Up",
+      "soundPath": "music/tavern/rickroll.ogg",
+      "enabled": true,
+      "display": {
+        "fontPreset": "cinzel",
+        "customFamily": "",
+        "fontFile": "",
+        "fontSize": 42,
+        "fontColor": "#ffffff",
+        "highlightColor": "#ffe082",
+        "outlineColor": "#000000",
+        "outlineWidth": 4,
+        "locationPreset": "bottom",
+        "x": 50,
+        "y": 88,
+        "maxWidth": 80,
+        "textAlign": "center",
+        "showPrevious": true,
+        "showNext": true
+      },
+      "lrc": "[00:18.00]We're no strangers to love\n[00:22.40]You know the rules and so do I",
+      "cues": [
+        { "start": 18.0, "end": 22.4, "text": "We're no strangers to love" },
+        { "start": 22.4, "end": 26.4, "text": "You know the rules and so do I" }
+      ]
+    }
+  ]
+}

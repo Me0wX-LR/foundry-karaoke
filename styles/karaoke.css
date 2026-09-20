@@ -1,0 +1,226 @@
+#foundry-karaoke-overlay.fk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+
+#foundry-karaoke-overlay.fk-hidden {
+  display: none;
+}
+
+.fk-lyric-box {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-wrap: balance;
+}
+
+.fk-line {
+  line-height: 1.2;
+  margin: 0.12em 0;
+  color: inherit;
+  font-family: inherit;
+  text-shadow:
+    calc(var(--fk-outline-width, 4px) * -1) 0 0 var(--fk-outline, #000),
+    var(--fk-outline-width, 4px) 0 0 var(--fk-outline, #000),
+    0 calc(var(--fk-outline-width, 4px) * -1) 0 var(--fk-outline, #000),
+    0 var(--fk-outline-width, 4px) 0 var(--fk-outline, #000),
+    calc(var(--fk-outline-width, 4px) * -1) calc(var(--fk-outline-width, 4px) * -1) 0 var(--fk-outline, #000),
+    var(--fk-outline-width, 4px) calc(var(--fk-outline-width, 4px) * -1) 0 var(--fk-outline, #000),
+    calc(var(--fk-outline-width, 4px) * -1) var(--fk-outline-width, 4px) 0 var(--fk-outline, #000),
+    var(--fk-outline-width, 4px) var(--fk-outline-width, 4px) 0 var(--fk-outline, #000);
+}
+
+.fk-line.fk-prev,
+.fk-line.fk-next {
+  opacity: 0.45;
+  font-size: 0.62em;
+}
+
+.fk-line.fk-current {
+  color: var(--fk-highlight, #ffe082);
+  font-weight: 700;
+  transform: scale(1.04);
+}
+
+.fk-line.fk-empty {
+  min-height: 0;
+  margin: 0;
+}
+
+.fk-manager,
+.fk-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.fk-toolbar,
+.fk-footer,
+.fk-lyric-tools,
+.fk-editor-head,
+.fk-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.fk-toolbar-actions,
+.fk-sound-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.fk-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 12rem;
+}
+
+.fk-search input {
+  width: 100%;
+}
+
+.fk-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.fk-track-list {
+  max-height: 32rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fk-playlist h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.fk-playlist ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fk-sound {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #444);
+}
+
+.fk-sound-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.fk-meta {
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+.fk-kicker {
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+.fk-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.fk-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.fk-col label,
+.fk-lrc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fk-location-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+.fk-location-presets button.active {
+  box-shadow: 0 0 0 2px var(--color-warm-2, #ff6400);
+}
+
+.fk-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light-primary, #666);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.35)),
+    #1b1b1b;
+  cursor: crosshair;
+}
+
+.fk-stage-lyric {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  user-select: none;
+  padding: 0.15rem 0.4rem;
+  max-width: 96%;
+}
+
+.fk-stage-lyric:active {
+  cursor: grabbing;
+}
+
+.fk-lrc textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  min-height: 12rem;
+}
+
+.fk-footer {
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  background: var(--background-color, transparent);
+  padding-top: 0.35rem;
+}
+
+.fk-directory-button {
+  margin: 0.25rem;
+}
+
+.fk-sound-badge,
+.fk-has-karaoke .fk-sound-badge {
+  color: var(--color-warm-2, #ffb347);
+  margin-right: 0.3rem;
+}
+
+.foundry-karaoke .hidden {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .fk-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
