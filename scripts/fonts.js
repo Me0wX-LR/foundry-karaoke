@@ -3,11 +3,19 @@ import { mergeDisplay } from "./data.js";
 
 const FILE_FONT_ID = "foundry-karaoke-file-font";
 
-export function ensureFonts(display) {
+export function ensureFonts(display, languages = []) {
   const d = mergeDisplay(display);
-  const preset = FONT_PRESETS.find((f) => f.id === d.fontPreset);
+  loadPreset(d.fontPreset, d.fontFile);
+  loadPreset(d.referenceFontPreset);
+  for (const lang of languages) {
+    if (lang?.fontPreset) loadPreset(lang.fontPreset);
+  }
+}
+
+function loadPreset(presetId, fontFile = "") {
+  const preset = FONT_PRESETS.find((f) => f.id === presetId);
   if (preset?.google) loadGoogleFont(preset.google);
-  if (d.fontPreset === "file" && d.fontFile) loadFileFont(d.fontFile);
+  if (presetId === "file" && fontFile) loadFileFont(fontFile);
 }
 
 function loadGoogleFont(query) {

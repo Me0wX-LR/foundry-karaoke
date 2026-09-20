@@ -2,7 +2,7 @@
   "id": "foundry-karaoke",
   "title": "Foundry Karaoke",
   "description": "Add karaoke lyrics to selected Foundry playlist tracks. Pick font and on-screen location, then import or export the pack as JSON.",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
@@ -31,5 +31,5 @@
   "url": "https://github.com/Me0wX-LR/foundry-karaoke",
   "bugs": "https://github.com/Me0wX-LR/foundry-karaoke/issues",
   "manifest": "https://github.com/Me0wX-LR/foundry-karaoke/releases/latest/download/module.json",
-  "download": "https://github.com/Me0wX-LR/foundry-karaoke/releases/download/v1.0.0/foundry-karaoke.zip"
+  "download": "https://github.com/Me0wX-LR/foundry-karaoke/releases/download/v1.2.0/foundry-karaoke.zip"
 }

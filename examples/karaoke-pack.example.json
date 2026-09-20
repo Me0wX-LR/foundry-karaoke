@@ -1,36 +1,67 @@
 {
   "schema": "foundry-karaoke",
-  "version": 1,
-  "exportedAt": "2026-09-20T13:00:00.000Z",
+  "version": 3,
+  "exportedAt": "2026-09-20T15:00:00.000Z",
   "tracks": [
     {
-      "playlistId": "",
       "playlistName": "Tavern Songs",
-      "soundId": "",
       "soundName": "Never Gonna Give You Up",
       "soundPath": "music/tavern/rickroll.ogg",
       "enabled": true,
       "display": {
-        "fontPreset": "cinzel",
-        "customFamily": "",
-        "fontFile": "",
+        "fontPreset": "noto-sans-tc",
         "fontSize": 42,
-        "fontColor": "#ffffff",
-        "highlightColor": "#ffe082",
-        "outlineColor": "#000000",
-        "outlineWidth": 4,
         "locationPreset": "bottom",
         "x": 50,
         "y": 88,
         "maxWidth": 80,
-        "textAlign": "center",
         "showPrevious": true,
-        "showNext": true
+        "showNext": true,
+        "showSecondary": true,
+        "mainLanguage": "zh-Hant",
+        "secondaryLanguage": "ja",
+        "referenceScale": 55,
+        "referenceColor": "#f3e5ab"
       },
-      "lrc": "[00:18.00]We're no strangers to love\n[00:22.40]You know the rules and so do I",
+      "languages": [
+        {
+          "id": "zh-Hant",
+          "label": "Traditional Chinese",
+          "fontPreset": "noto-sans-tc",
+          "lrc": "[00:18.00]我們從不對愛感到陌生\n[00:22.40]你懂規則，我也一樣"
+        },
+        {
+          "id": "ja",
+          "label": "Japanese",
+          "fontPreset": "noto-sans-jp",
+          "lrc": "[00:18.00]僕らは愛に不思議はないさ\n[00:22.40]ルールも知ってる 僕も同じ"
+        },
+        {
+          "id": "en",
+          "label": "English",
+          "fontPreset": "signika",
+          "lrc": "[00:18.00]We're no strangers to love\n[00:22.40]You know the rules and so do I"
+        }
+      ],
       "cues": [
-        { "start": 18.0, "end": 22.4, "text": "We're no strangers to love" },
-        { "start": 22.4, "end": 26.4, "text": "You know the rules and so do I" }
+        {
+          "start": 18.0,
+          "end": 22.4,
+          "texts": {
+            "zh-Hant": "我們從不對愛感到陌生",
+            "ja": "僕らは愛に不思議はないさ",
+            "en": "We're no strangers to love"
+          }
+        },
+        {
+          "start": 22.4,
+          "end": 26.4,
+          "texts": {
+            "zh-Hant": "你懂規則，我也一樣",
+            "ja": "ルールも知ってる 僕も同じ",
+            "en": "You know the rules and so do I"
+          }
+        }
       ]
     }
   ]

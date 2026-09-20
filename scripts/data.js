@@ -4,10 +4,16 @@ import {
   SCHEMA,
   SCHEMA_VERSION,
   FONT_PRESETS,
+  LANGUAGE_PRESETS,
   LOCATION_PRESETS,
   defaultDisplay,
-  defaultTrack
+  defaultLanguage
 } from "./constants.js";
+
+export const clientLanguage = {
+  mainId: null,
+  secondaryId: null
+};
 
 export function localize(key, data) {
   const full = key.startsWith("KARAOKE.") ? key : `KARAOKE.${key}`;
@@ -15,29 +21,131 @@ export function localize(key, data) {
 }
 
 export function mergeDisplay(source = {}) {
-  return foundry.utils.mergeObject(defaultDisplay(), source, { inplace: false });
+  const display = foundry.utils.mergeObject(defaultDisplay(), source, { inplace: false });
+  if (typeof source.showSecondary !== "boolean" && typeof source.dualLanguage === "boolean") {
+    display.showSecondary = source.dualLanguage;
+  }
+  display.dualLanguage = Boolean(display.showSecondary);
+  return display;
+}
+
+export function slugLanguageId(value, fallback = "lang") {
+  const slug = String(value || fallback).trim().replace(/[^\w.-]+/g, "-") || fallback;
+  return slug;
+}
+
+export function normalizeLanguage(lang, index = 0) {
+  if (!lang || typeof lang !== "object") return defaultLanguage(index);
+  const preset = LANGUAGE_PRESETS.find((p) => p.id === lang.id);
+  const id = slugLanguageId(lang.id || preset?.id || `lang-${index + 1}`, `lang-${index + 1}`);
+  return {
+    id,
+    label: String(lang.label || preset?.label || id).trim() || id,
+    fontPreset: lang.fontPreset || preset?.fontPreset || "signika",
+    lrc: typeof lang.lrc === "string" ? lang.lrc : ""
+  };
+}
+
+export function languagesFromLegacy(source = {}) {
+  const languages = [];
+  const lrc = typeof source.lrc === "string" ? source.lrc : "";
+  const lrcRef = typeof source.lrcRef === "string" ? source.lrcRef : "";
+  if (lrc.trim() || source.cues?.some((cue) => cue?.text || cue?.texts)) {
+    languages.push({
+      id: "main",
+      label: "Main",
+      fontPreset: source.display?.fontPreset || "noto-sans-tc",
+      lrc
+    });
+  }
+  if (lrcRef.trim() || source.cues?.some((cue) => cue?.ref)) {
+    languages.push({
+      id: "secondary",
+      label: "Secondary",
+      fontPreset: source.display?.referenceFontPreset || "noto-sans-jp",
+      lrc: lrcRef
+    });
+  }
+  if (!languages.length) languages.push(defaultLanguage(0));
+  return languages.map((lang, index) => normalizeLanguage(lang, index));
+}
+
+export function uniqueLanguages(list = []) {
+  const seen = new Set();
+  const languages = [];
+  list.forEach((lang, index) => {
+    const normalized = normalizeLanguage(lang, index);
+    let id = normalized.id;
+    let n = 2;
+    while (seen.has(id)) {
+      id = `${normalized.id}-${n}`;
+      n += 1;
+    }
+    seen.add(id);
+    languages.push({ ...normalized, id });
+  });
+  return languages.length ? languages : [defaultLanguage(0)];
 }
 
 export function mergeTrack(source = {}) {
-  const base = defaultTrack();
-  const merged = foundry.utils.mergeObject(base, source, { inplace: false });
-  merged.display = mergeDisplay(source.display ?? base.display);
-  merged.cues = Array.isArray(source.cues) ? source.cues.map(normalizeCue).filter(Boolean) : [];
-  merged.lrc = typeof source.lrc === "string" ? source.lrc : cuesToLrc(merged.cues);
-  merged.enabled = source.enabled !== false;
-  if (!merged.cues.length && merged.lrc) merged.cues = parseLrc(merged.lrc);
-  return merged;
+  const display = mergeDisplay(source.display ?? {});
+  const fromArray = Array.isArray(source.languages) ? source.languages : [];
+  const languages = uniqueLanguages(fromArray.length ? fromArray : languagesFromLegacy(source));
+  const ids = languages.map((lang) => lang.id);
+  let cues = Array.isArray(source.cues)
+    ? source.cues.map((cue) => normalizeCue(cue, ids)).filter(Boolean)
+    : [];
+  const built = buildCuesFromLanguages(languages);
+  if (built.length) cues = built;
+  languages.forEach((lang) => {
+    if (!lang.lrc.trim()) lang.lrc = cuesToLrcForLanguage(cues, lang.id);
+  });
+  if (!ids.includes(display.mainLanguage)) display.mainLanguage = ids[0];
+  if (display.secondaryLanguage && !ids.includes(display.secondaryLanguage)) {
+    display.secondaryLanguage = ids.find((id) => id !== display.mainLanguage) ?? "";
+  }
+  if (ids.length > 1 && !display.secondaryLanguage) {
+    display.secondaryLanguage = ids.find((id) => id !== display.mainLanguage) ?? "";
+  }
+  if (typeof source.display?.showSecondary !== "boolean" && typeof source.display?.dualLanguage !== "boolean") {
+    display.showSecondary = ids.length > 1 && Boolean(display.secondaryLanguage);
+  }
+  display.dualLanguage = Boolean(display.showSecondary && display.secondaryLanguage);
+  const mainId = display.mainLanguage;
+  const secondaryId = display.secondaryLanguage;
+  return {
+    enabled: source.enabled !== false,
+    display,
+    languages,
+    lrc: languages[0]?.lrc ?? "",
+    lrcRef: languages[1]?.lrc ?? "",
+    cues: cues.map((cue) => ({
+      ...cue,
+      text: cue.texts?.[mainId] ?? Object.values(cue.texts ?? {})[0] ?? "",
+      ref: secondaryId ? cue.texts?.[secondaryId] ?? "" : ""
+    }))
+  };
 }
 
-export function normalizeCue(cue) {
+export function normalizeCue(cue, languageIds = []) {
   if (!cue || typeof cue !== "object") return null;
   const start = Number(cue.start);
   if (!Number.isFinite(start) || start < 0) return null;
   const endRaw = cue.end == null || cue.end === "" ? null : Number(cue.end);
   const end = Number.isFinite(endRaw) ? endRaw : null;
-  const text = String(cue.text ?? "").trim();
-  if (!text) return null;
-  return { start, end, text };
+  const texts = {};
+  if (cue.texts && typeof cue.texts === "object") {
+    for (const [id, value] of Object.entries(cue.texts)) {
+      const text = String(value ?? "").trim();
+      if (text) texts[id] = text;
+    }
+  }
+  const mainId = languageIds[0] || "zh-Hant";
+  const secondaryId = languageIds[1] || "ja";
+  if (cue.text) texts[mainId] = String(cue.text).trim();
+  if (cue.ref) texts[secondaryId] = String(cue.ref).trim();
+  if (!Object.keys(texts).length) return null;
+  return { start, end, texts };
 }
 
 export function getTrack(sound) {
@@ -49,26 +157,99 @@ export function getTrack(sound) {
 
 export function hasKaraoke(sound) {
   const track = getTrack(sound);
-  return Boolean(track?.enabled && track.cues?.length);
+  return Boolean(track?.enabled && track.cues?.some((cue) => cueText(cue) || Object.values(cue.texts ?? {}).some(Boolean)));
 }
 
 export async function setTrack(sound, data) {
   if (!sound) throw new Error("Missing playlist sound");
-  const track = mergeTrack(data);
-  if (!track.cues.length && track.lrc) track.cues = parseLrc(track.lrc);
-  if (track.cues.length && !track.lrc) track.lrc = cuesToLrc(track.cues);
-  return sound.setFlag(MODULE_ID, FLAG_KEY, track);
+  return sound.setFlag(MODULE_ID, FLAG_KEY, mergeTrack(data));
 }
 
 export async function clearTrack(sound) {
   return sound.unsetFlag(MODULE_ID, FLAG_KEY);
 }
 
-export function resolveFontFamily(display) {
+export function resolveFontFamily(display, role = "main", language = null) {
+  if (language?.fontPreset) {
+    if (language.fontPreset === "custom" && language.customFamily?.trim()) return language.customFamily.trim();
+    const preset = FONT_PRESETS.find((f) => f.id === language.fontPreset);
+    if (preset?.family) return preset.family;
+  }
   const d = mergeDisplay(display);
+  if (role === "ref") {
+    if (d.referenceFontPreset === "custom" && d.referenceCustomFamily?.trim()) {
+      return d.referenceCustomFamily.trim();
+    }
+    return FONT_PRESETS.find((f) => f.id === d.referenceFontPreset)?.family
+      || "\"Noto Sans JP\", sans-serif";
+  }
   if (d.fontPreset === "file") return "FoundryKaraokeFont, Signika, sans-serif";
   if (d.fontPreset === "custom" && d.customFamily?.trim()) return d.customFamily.trim();
   return FONT_PRESETS.find((f) => f.id === d.fontPreset)?.family || "Signika, sans-serif";
+}
+
+export function cueText(cue, langId) {
+  if (!cue) return "";
+  if (langId && cue.texts?.[langId]) return cue.texts[langId];
+  if (langId && langId === "secondary") return cue.ref || "";
+  return cue.texts?.[langId] || cue.text || Object.values(cue.texts ?? {})[0] || "";
+}
+
+export function resolveLanguageRoles(track) {
+  const languages = track?.languages ?? [];
+  const ids = languages.map((lang) => lang.id);
+  const display = mergeDisplay(track?.display ?? {});
+  let mainId = clientLanguage.mainId || display.mainLanguage || ids[0];
+  let secondaryId = clientLanguage.secondaryId;
+  if (secondaryId == null) {
+    secondaryId = display.showSecondary === false
+      ? "off"
+      : (display.secondaryLanguage || ids.find((id) => id !== mainId) || "off");
+  }
+  if (!ids.includes(mainId)) mainId = ids[0] || "";
+  if (secondaryId && secondaryId !== "off" && !ids.includes(secondaryId)) {
+    secondaryId = ids.find((id) => id !== mainId) || "off";
+  }
+  if (secondaryId === mainId) secondaryId = ids.find((id) => id !== mainId) || "off";
+  const showSecondary = Boolean(secondaryId)
+    && secondaryId !== "off"
+    && game.settings.get(MODULE_ID, "showReferenceLine") !== false;
+  return {
+    mainId,
+    secondaryId: showSecondary ? secondaryId : "",
+    showSecondary,
+    languages,
+    main: languages.find((lang) => lang.id === mainId) ?? languages[0] ?? null,
+    secondary: showSecondary ? languages.find((lang) => lang.id === secondaryId) ?? null : null
+  };
+}
+
+export function swapClientLanguages(track) {
+  const roles = resolveLanguageRoles({
+    ...track,
+    display: track.display
+  });
+  const currentMain = clientLanguage.mainId || roles.mainId;
+  const currentSecondary = clientLanguage.secondaryId == null ? roles.secondaryId : clientLanguage.secondaryId;
+  const other = (currentSecondary && currentSecondary !== "off")
+    ? currentSecondary
+    : (track.languages ?? []).map((lang) => lang.id).find((id) => id !== currentMain);
+  if (!other) return resolveLanguageRoles(track);
+  clientLanguage.mainId = other;
+  clientLanguage.secondaryId = currentMain || "";
+  return resolveLanguageRoles(track);
+}
+
+export function lineVisibility(display) {
+  const d = mergeDisplay(display);
+  const clientPrev = game.settings.get(MODULE_ID, "showPreviousLine") !== false;
+  const clientNext = game.settings.get(MODULE_ID, "showNextLine") !== false;
+  const clientRef = game.settings.get(MODULE_ID, "showReferenceLine") !== false;
+  return {
+    previous: Boolean(d.showPrevious) && clientPrev,
+    next: Boolean(d.showNext) && clientNext,
+    reference: Boolean(d.showSecondary ?? d.dualLanguage) && clientRef && clientLanguage.secondaryId !== "off"
+  };
 }
 
 export function resolveLocation(display) {
@@ -99,10 +280,13 @@ export function worldDefaults() {
 }
 
 export function newTrackFromSettings() {
+  const display = worldDefaults();
+  const main = defaultLanguage(0);
+  main.fontPreset = display.fontPreset === "cinzel" ? main.fontPreset : display.fontPreset;
   return mergeTrack({
     enabled: true,
-    display: worldDefaults(),
-    lrc: "",
+    display: { ...display, mainLanguage: main.id, showSecondary: false },
+    languages: [main],
     cues: []
   });
 }
@@ -150,12 +334,82 @@ export function parseLrc(text) {
   return raw;
 }
 
-export function cuesToLrc(cues = []) {
+export function attachLanguage(cues = [], langId, parsed = []) {
+  if (!parsed.length) return cues.map((cue) => cue);
+  const used = new Set();
+  const paired = cues.map((cue) => {
+    let best = -1;
+    let bestDist = 0.25;
+    parsed.forEach((line, index) => {
+      if (used.has(index)) return;
+      const dist = Math.abs(line.start - cue.start);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = index;
+      }
+    });
+    const texts = { ...(cue.texts ?? {}) };
+    if (best >= 0) {
+      used.add(best);
+      texts[langId] = parsed[best].text;
+    }
+    return { ...cue, texts };
+  });
+  parsed.forEach((line, index) => {
+    if (used.has(index)) return;
+    paired.push({ start: line.start, end: line.end, texts: { [langId]: line.text } });
+  });
+  paired.sort((a, b) => a.start - b.start);
+  return paired;
+}
+
+export function buildCuesFromLanguages(languages = []) {
+  let cues = [];
+  for (const lang of languages) {
+    const parsed = parseLrc(lang.lrc);
+    if (!parsed.length) continue;
+    if (!cues.length) {
+      cues = parsed.map((line) => ({
+        start: line.start,
+        end: line.end,
+        texts: { [lang.id]: line.text }
+      }));
+    } else {
+      cues = attachLanguage(cues, lang.id, parsed);
+    }
+  }
+  return cues;
+}
+
+export function cuesToLrcForLanguage(cues = [], langId) {
   return cues
-    .map(normalizeCue)
+    .filter((cue) => Number.isFinite(cue.start) && cueText(cue, langId))
+    .sort((a, b) => a.start - b.start)
+    .map((cue) => `[${formatStamp(cue.start)}]${cueText(cue, langId)}`)
+    .join("\n");
+}
+
+export function attachRefs(mainCues = [], refCues = []) {
+  return attachLanguage(mainCues.map((cue) => ({
+    start: cue.start,
+    end: cue.end,
+    texts: { ...(cue.texts ?? {}), main: cue.text ?? cue.texts?.main ?? "" }
+  })), "secondary", refCues).map((cue) => ({
+    start: cue.start,
+    end: cue.end,
+    text: cue.texts.main || cue.text || "",
+    ref: cue.texts.secondary || ""
+  }));
+}
+
+export function cuesToLrc(cues = [], field = "text") {
+  if (field !== "text" && field !== "ref") return cuesToLrcForLanguage(cues, field);
+  return cues
+    .map((cue) => normalizeCue(cue))
     .filter(Boolean)
     .sort((a, b) => a.start - b.start)
-    .map((c) => `[${formatStamp(c.start)}]${c.text}`)
+    .map((cue) => `[${formatStamp(cue.start)}]${field === "ref" ? cue.texts?.ja || cue.ref || "" : cue.texts?.["zh-Hant"] || cue.text || ""}`)
+    .filter((line) => !/\[[\d:.]+\]$/.test(line))
     .join("\n");
 }
 
@@ -189,16 +443,25 @@ export function collectKaraokeSounds() {
 }
 
 export function serializeTrack(playlist, sound, track) {
+  const merged = mergeTrack(track);
   return {
     playlistId: playlist.id,
     playlistName: playlist.name,
     soundId: sound.id,
     soundName: sound.name,
     soundPath: sound.path ?? "",
-    enabled: track.enabled !== false,
-    display: mergeDisplay(track.display),
-    lrc: track.lrc || cuesToLrc(track.cues),
-    cues: (track.cues ?? []).map(normalizeCue).filter(Boolean)
+    enabled: merged.enabled !== false,
+    display: merged.display,
+    languages: merged.languages,
+    lrc: merged.languages[0]?.lrc ?? "",
+    lrcRef: merged.languages[1]?.lrc ?? "",
+    cues: merged.cues.map((cue) => ({
+      start: cue.start,
+      end: cue.end,
+      texts: cue.texts ?? {},
+      text: cue.text ?? "",
+      ref: cue.ref ?? ""
+    }))
   };
 }
 
@@ -222,7 +485,7 @@ export function parseImportPayload(raw) {
   }
   if (!data || typeof data !== "object") return null;
   if (Array.isArray(data.tracks)) return data.tracks;
-  if (data.soundName || data.lrc || data.cues) return [data];
+  if (data.soundName || data.lrc || data.lrcRef || data.languages || data.cues) return [data];
   return null;
 }
 
@@ -264,7 +527,9 @@ export async function importTracks(entries, { targetSound = null } = {}) {
     await setTrack(sound, {
       enabled: entry.enabled !== false,
       display: entry.display,
+      languages: entry.languages,
       lrc: entry.lrc,
+      lrcRef: entry.lrcRef,
       cues: entry.cues
     });
     result.ok += 1;

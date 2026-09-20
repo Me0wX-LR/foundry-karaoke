@@ -1,4 +1,4 @@
-import { MODULE_ID, FONT_PRESETS, LOCATION_PRESETS } from "./constants.js";
+import { MODULE_ID, FONT_PRESETS, LANGUAGE_PRESETS, LOCATION_PRESETS, defaultLanguage } from "./constants.js";
 import {
   FilePickerClass,
   buildExportPack,
@@ -12,7 +12,6 @@ import {
   mergeTrack,
   newTrackFromSettings,
   parseImportPayload,
-  parseLrc,
   pickLocalJsonFile,
   playbackTime,
   resolveFontFamily,
@@ -178,6 +177,10 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       pickFontFile: this.onPickFontFile,
       setLocation: this.onSetLocation,
       stamp: this.onStamp,
+      stampAll: this.onStampAll,
+      addLanguage: this.onAddLanguage,
+      removeLanguage: this.onRemoveLanguage,
+      swapRoles: this.onSwapRoles,
       playTrack: this.onPlayTrack,
       stopTrack: this.onStopTrack,
       previewTable: this.onPreviewTable,
@@ -229,7 +232,22 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       soundName: this.sound.name,
       enabled: track.enabled,
       display,
-      lrc: track.lrc || "",
+      languages: track.languages.map((lang, index) => ({
+        ...lang,
+        index,
+        fontPresets: FONT_PRESETS.filter((f) => f.id !== "file").map((f) => ({
+          ...f,
+          selected: f.id === lang.fontPreset
+        }))
+      })),
+      languageOptions: track.languages.map((lang) => ({
+        id: lang.id,
+        label: lang.label,
+        mainSelected: lang.id === display.mainLanguage,
+        secondarySelected: lang.id === display.secondaryLanguage
+      })),
+      languagePresets: LANGUAGE_PRESETS,
+      canRemoveLanguage: track.languages.length > 1,
       cueCount: track.cues.length,
       cueCountLabel: localize("CueCount", { n: track.cues.length }),
       fontPresets: FONT_PRESETS.map((f) => ({ ...f, selected: f.id === display.fontPreset })),
@@ -281,24 +299,47 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       maxWidth: Number(value("maxWidth")),
       textAlign: value("textAlign"),
       showPrevious: checked("showPrevious"),
-      showNext: checked("showNext")
+      showNext: checked("showNext"),
+      showSecondary: checked("showSecondary"),
+      dualLanguage: checked("showSecondary"),
+      mainLanguage: value("mainLanguage"),
+      secondaryLanguage: value("secondaryLanguage"),
+      referenceScale: Number(value("referenceScale")),
+      referenceColor: value("referenceColor")
     });
   }
 
   refreshStage() {
     const display = this.formDisplay();
-    ensureFonts(display);
+    const languages = this.readLanguages();
+    ensureFonts(display, languages);
     const loc = resolveLocation(display);
     const stage = this.element.querySelector(".fk-stage-lyric");
+    const main = this.element.querySelector(".fk-stage-main");
+    const ref = this.element.querySelector(".fk-stage-ref");
     if (!stage) return;
     stage.style.left = `${loc.x}%`;
     stage.style.top = `${loc.y}%`;
     stage.style.width = `${display.maxWidth}%`;
     stage.style.textAlign = display.textAlign;
-    stage.style.fontFamily = resolveFontFamily(display);
+    stage.style.fontFamily = resolveFontFamily(display, "main");
     stage.style.fontSize = `${Math.max(12, Number(display.fontSize) * 0.35)}px`;
     stage.style.color = display.highlightColor || display.fontColor;
-    stage.textContent = localize("SampleCurrent");
+    stage.style.setProperty("--fk-ref-font", resolveFontFamily(display, "ref"));
+    stage.style.setProperty("--fk-ref-scale", `${display.referenceScale || 55}%`);
+    stage.style.setProperty("--fk-ref-color", display.referenceColor || "#f3e5ab");
+    if (main) {
+      const mainLang = this.readLanguages().find((lang) => lang.id === display.mainLanguage);
+      main.textContent = mainLang?.label || localize("SampleCurrent");
+      stage.style.fontFamily = resolveFontFamily(display, "main", mainLang);
+    }
+    if (ref) {
+      const secondaryLang = this.readLanguages().find((lang) => lang.id === display.secondaryLanguage);
+      const show = Boolean(display.showSecondary && display.secondaryLanguage);
+      ref.textContent = show ? (secondaryLang?.label || localize("SampleCurrentRef")) : "";
+      ref.hidden = !show;
+      stage.style.setProperty("--fk-ref-font", resolveFontFamily(display, "ref", secondaryLang));
+    }
     this.element.querySelectorAll("[data-location]").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.location === display.locationPreset);
     });
@@ -354,14 +395,26 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     tick();
   }
 
+  readLanguages() {
+    const languages = [];
+    this.element.querySelectorAll(".fk-language").forEach((article, index) => {
+      languages.push({
+        id: article.querySelector(`[name="lang.${index}.id"]`)?.value,
+        label: article.querySelector(`[name="lang.${index}.label"]`)?.value,
+        fontPreset: article.querySelector(`[name="lang.${index}.fontPreset"]`)?.value,
+        lrc: article.querySelector(`[name="lang.${index}.lrc"]`)?.value ?? ""
+      });
+    });
+    return languages;
+  }
+
   readTrack() {
     const display = this.formDisplay();
-    const lrc = this.element.querySelector('[name="lrc"]')?.value ?? "";
+    const languages = this.readLanguages();
     return mergeTrack({
       enabled: this.element.querySelector('[name="enabled"]')?.checked ?? true,
       display,
-      lrc,
-      cues: parseLrc(lrc)
+      languages
     });
   }
 
@@ -394,12 +447,62 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.refreshStage();
   }
 
-  static async onStamp() {
-    const area = this.element.querySelector('[name="lrc"]');
+  static async onStamp(_event, target) {
+    const index = target?.dataset?.index ?? "0";
+    const area = this.element.querySelector(`[name="lang.${index}.lrc"]`)
+      || this.element.querySelector("textarea:focus")
+      || this.element.querySelector("textarea");
+    if (!area) return;
     const stamp = `[${formatStamp(playbackTime(this.sound))}]`;
     const start = area.selectionStart ?? area.value.length;
     area.setRangeText(`${stamp}`, start, area.selectionEnd ?? start, "end");
     area.focus();
+  }
+
+  static async onStampAll() {
+    const stamp = `[${formatStamp(playbackTime(this.sound))}]`;
+    this.element.querySelectorAll("textarea[name$='.lrc']").forEach((area) => {
+      const start = area.selectionStart ?? area.value.length;
+      area.setRangeText(`${stamp}`, start, area.selectionEnd ?? start, "end");
+    });
+  }
+
+  static async onAddLanguage() {
+    const track = this.readTrack();
+    const presetId = this.element.querySelector('[name="addLanguagePreset"]')?.value;
+    const preset = LANGUAGE_PRESETS.find((p) => p.id === presetId);
+    const next = preset ? { ...preset, lrc: "" } : defaultLanguage(track.languages.length);
+    if (track.languages.some((lang) => lang.id === next.id)) next.id = `${next.id}-${track.languages.length + 1}`;
+    track.languages.push(next);
+    if (track.languages.length > 1 && !track.display.secondaryLanguage) {
+      track.display.secondaryLanguage = next.id;
+      track.display.showSecondary = true;
+    }
+    const merged = mergeTrack(track);
+    await setTrack(this.sound, merged);
+    this.render({ force: true });
+  }
+
+  static async onRemoveLanguage(_event, target) {
+    const track = this.readTrack();
+    const index = Number(target.dataset.index);
+    if (!Number.isFinite(index) || track.languages.length < 2) return;
+    track.languages.splice(index, 1);
+    const merged = mergeTrack(track);
+    await setTrack(this.sound, merged);
+    this.render({ force: true });
+  }
+
+  static async onSwapRoles() {
+    const main = this.element.querySelector('[name="mainLanguage"]');
+    const secondary = this.element.querySelector('[name="secondaryLanguage"]');
+    if (!main || !secondary || !secondary.value) return;
+    const previousMain = main.value;
+    main.value = secondary.value;
+    secondary.value = previousMain;
+    const show = this.element.querySelector('[name="showSecondary"]');
+    if (show) show.checked = true;
+    this.refreshStage();
   }
 
   static async onPlayTrack() {
@@ -411,12 +514,21 @@ export class KaraokeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onPreviewTable() {
-    const display = this.formDisplay();
+    const track = this.readTrack();
+    const display = track.display;
+    const showSecondary = Boolean(display.showSecondary && display.secondaryLanguage);
     overlay.showPreview(display, {
-      prev: localize("SamplePrev"),
-      current: localize("SampleCurrent"),
-      next: localize("SampleNext")
-    });
+      prev: display.showPrevious
+        ? { text: localize("SamplePrev"), ref: showSecondary ? localize("SamplePrevRef") : "" }
+        : { text: "", ref: "" },
+      current: {
+        text: localize("SampleCurrent"),
+        ref: showSecondary ? localize("SampleCurrentRef") : ""
+      },
+      next: display.showNext
+        ? { text: localize("SampleNext"), ref: showSecondary ? localize("SampleNextRef") : "" }
+        : { text: "", ref: "" }
+    }, 4000, track);
     ui.notifications.info(localize("Previewing"));
   }
 

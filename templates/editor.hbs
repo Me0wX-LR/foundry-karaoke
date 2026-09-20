@@ -81,17 +81,58 @@
           </label>
         </div>
         <div class="fk-stage" title="{{localize "KARAOKE.StageHint"}}">
-          <div class="fk-stage-lyric">{{localize "KARAOKE.SampleCurrent"}}</div>
+          <div class="fk-stage-lyric">
+            <div class="fk-stage-ref"></div>
+            <div class="fk-stage-main">{{localize "KARAOKE.SampleCurrent"}}</div>
+          </div>
         </div>
         <p class="notes">{{localize "KARAOKE.StageHint"}}</p>
-        <label class="fk-check">
-          <input type="checkbox" name="showPrevious" {{checked display.showPrevious}} />
-          {{localize "KARAOKE.ShowPrevious"}}
-        </label>
-        <label class="fk-check">
-          <input type="checkbox" name="showNext" {{checked display.showNext}} />
-          {{localize "KARAOKE.ShowNext"}}
-        </label>
+        <fieldset class="fk-surround">
+          <legend>{{localize "KARAOKE.SurroundingLines"}}</legend>
+          <label class="fk-check">
+            <input type="checkbox" name="showPrevious" {{checked display.showPrevious}} />
+            {{localize "KARAOKE.ShowPrevious"}}
+          </label>
+          <label class="fk-check">
+            <input type="checkbox" name="showNext" {{checked display.showNext}} />
+            {{localize "KARAOKE.ShowNext"}}
+          </label>
+          <p class="notes">{{localize "KARAOKE.SurroundingHint"}}</p>
+        </fieldset>
+        <fieldset class="fk-surround">
+          <legend>{{localize "KARAOKE.Languages"}}</legend>
+          <label>{{localize "KARAOKE.MainLanguage"}}
+            <select name="mainLanguage">
+              {{#each languageOptions}}
+              <option value="{{id}}" {{#if mainSelected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label>{{localize "KARAOKE.SecondaryLanguage"}}
+            <select name="secondaryLanguage">
+              <option value="" {{#unless display.secondaryLanguage}}selected{{/unless}}>{{localize "KARAOKE.SecondaryOff"}}</option>
+              {{#each languageOptions}}
+              <option value="{{id}}" {{#if secondarySelected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label class="fk-check">
+            <input type="checkbox" name="showSecondary" {{checked display.showSecondary}} />
+            {{localize "KARAOKE.ShowSecondary"}}
+          </label>
+          <button type="button" data-action="swapRoles">
+            <i class="fa-solid fa-right-left"></i> {{localize "KARAOKE.SwapLanguages"}}
+          </button>
+          <div class="fk-inline">
+            <label>{{localize "KARAOKE.ReferenceScale"}}
+              <input type="number" name="referenceScale" min="30" max="90" step="1" value="{{display.referenceScale}}" />
+            </label>
+            <label>{{localize "KARAOKE.ReferenceColor"}}
+              <input type="color" name="referenceColor" value="{{display.referenceColor}}" />
+            </label>
+          </div>
+          <p class="notes">{{localize "KARAOKE.LanguageHint"}}</p>
+        </fieldset>
       </div>
     </div>
   </fieldset>
@@ -101,14 +142,48 @@
     <div class="fk-lyric-tools">
       <button type="button" data-action="playTrack"><i class="fa-solid fa-play"></i> {{localize "KARAOKE.PlayTrack"}}</button>
       <button type="button" data-action="stopTrack"><i class="fa-solid fa-stop"></i> {{localize "KARAOKE.StopTrack"}}</button>
-      <button type="button" data-action="stamp"><i class="fa-solid fa-stopwatch"></i> {{localize "KARAOKE.Stamp"}}</button>
+      <button type="button" data-action="stampAll"><i class="fa-solid fa-stopwatch"></i> {{localize "KARAOKE.StampAll"}}</button>
       <span>{{localize "KARAOKE.Playhead"}}: <code class="fk-playhead">00:00.00</code></span>
       <span class="fk-meta">{{cueCountLabel}}</span>
     </div>
-    <label class="fk-lrc">
-      <span>{{localize "KARAOKE.LrcLabel"}}</span>
-      <textarea name="lrc" rows="12" spellcheck="true">{{lrc}}</textarea>
-    </label>
+    <div class="fk-language-list">
+      {{#each languages}}
+      <article class="fk-language">
+        <header class="fk-language-head">
+          <label>{{localize "KARAOKE.LanguageId"}}
+            <input type="text" name="lang.{{index}}.id" value="{{id}}" />
+          </label>
+          <label>{{localize "KARAOKE.LanguageLabel"}}
+            <input type="text" name="lang.{{index}}.label" value="{{label}}" />
+          </label>
+          <label>{{localize "KARAOKE.LanguageFont"}}
+            <select name="lang.{{index}}.fontPreset">
+              {{#each fontPresets}}
+              <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <button type="button" data-action="stamp" data-index="{{index}}"><i class="fa-solid fa-stopwatch"></i></button>
+          <button type="button" data-action="removeLanguage" data-index="{{index}}" {{#unless ../canRemoveLanguage}}disabled{{/unless}}>
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </header>
+        <label class="fk-lrc">
+          <span>{{localize "KARAOKE.LrcLabel"}} ({{label}})</span>
+          <textarea name="lang.{{index}}.lrc" rows="8" spellcheck="true">{{lrc}}</textarea>
+        </label>
+      </article>
+      {{/each}}
+    </div>
+    <div class="fk-add-language">
+      <select name="addLanguagePreset">
+        {{#each languagePresets}}
+        <option value="{{id}}">{{label}}</option>
+        {{/each}}
+        <option value="custom">{{localize "KARAOKE.CustomLanguage"}}</option>
+      </select>
+      <button type="button" data-action="addLanguage"><i class="fa-solid fa-plus"></i> {{localize "KARAOKE.AddLanguage"}}</button>
+    </div>
     <p class="notes">{{localize "KARAOKE.LrcHint"}}</p>
   </fieldset>
 

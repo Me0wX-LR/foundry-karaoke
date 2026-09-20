@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Me0wX-LR/foundry-karaoke/blob/main/schema/karaoke-pack.schema.json",
+  "title": "Foundry Karaoke pack",
+  "description": "Import/export format for Foundry Karaoke tracks. Schema version 3 supports any number of languages.",
+  "type": "object",
+  "required": ["tracks"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": { "const": "foundry-karaoke" },
+    "version": { "type": "integer", "minimum": 1, "description": "Pack format version. Current is 3." },
+    "exportedAt": { "type": "string" },
+    "tracks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/track" }
+    }
+  },
+  "$defs": {
+    "track": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "playlistId": { "type": "string" },
+        "playlistName": { "type": "string" },
+        "soundId": { "type": "string" },
+        "soundName": { "type": "string" },
+        "soundPath": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "display": { "$ref": "#/$defs/display" },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/language" }
+        },
+        "cues": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cue" }
+        },
+        "lrc": {
+          "type": "string",
+          "description": "Legacy single-language LRC. Still imported if languages is missing."
+        },
+        "lrcRef": {
+          "type": "string",
+          "description": "Legacy secondary LRC. Still imported if languages is missing."
+        }
+      }
+    },
+    "language": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "description": "Stable key used in cues.texts and display.mainLanguage / secondaryLanguage. Examples: zh-Hant, ja, en." },
+        "label": { "type": "string" },
+        "fontPreset": { "type": "string" },
+        "lrc": { "type": "string", "description": "LRC lyrics for this language. Pair lines across languages with the same timestamps." }
+      }
+    },
+    "cue": {
+      "type": "object",
+      "required": ["start"],
+      "additionalProperties": true,
+      "properties": {
+        "start": { "type": "number", "minimum": 0, "description": "Start time in seconds." },
+        "end": { "type": ["number", "null"], "minimum": 0 },
+        "texts": {
+          "type": "object",
+          "description": "Map of language id to lyric line.",
+          "additionalProperties": { "type": "string" }
+        },
+        "text": { "type": "string", "description": "Legacy main line." },
+        "ref": { "type": "string", "description": "Legacy secondary line." }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "fontPreset": { "type": "string" },
+        "customFamily": { "type": "string" },
+        "fontFile": { "type": "string" },
+        "fontSize": { "type": "number" },
+        "fontColor": { "type": "string" },
+        "highlightColor": { "type": "string" },
+        "outlineColor": { "type": "string" },
+        "outlineWidth": { "type": "number" },
+        "locationPreset": { "enum": ["top", "upper", "center", "lower", "bottom", "custom"] },
+        "x": { "type": "number", "minimum": 0, "maximum": 100 },
+        "y": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maxWidth": { "type": "number", "minimum": 20, "maximum": 100 },
+        "textAlign": { "enum": ["left", "center", "right"] },
+        "showPrevious": { "type": "boolean" },
+        "showNext": { "type": "boolean" },
+        "showSecondary": { "type": "boolean", "description": "Show the secondary language as smaller text above the main line." },
+        "dualLanguage": { "type": "boolean", "description": "Legacy alias of showSecondary." },
+        "mainLanguage": { "type": "string", "description": "Language id for the large main line." },
+        "secondaryLanguage": { "type": "string", "description": "Language id for the small top line. Empty string disables it." },
+        "referenceFontPreset": { "type": "string" },
+        "referenceCustomFamily": { "type": "string" },
+        "referenceScale": { "type": "number", "minimum": 30, "maximum": 90 },
+        "referenceColor": { "type": "string" }
+      }
+    }
+  }
+}

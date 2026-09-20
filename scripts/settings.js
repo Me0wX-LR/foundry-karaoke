@@ -43,6 +43,42 @@ export function registerSettings() {
     default: false
   });
 
+  game.settings.register(MODULE_ID, "showPreviousLine", {
+    name: "KARAOKE.ShowPreviousLine",
+    hint: "KARAOKE.SurroundingHint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "showNextLine", {
+    name: "KARAOKE.ShowNextLine",
+    hint: "KARAOKE.SurroundingHint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "showReferenceLine", {
+    name: "KARAOKE.ShowReferenceLine",
+    hint: "KARAOKE.ShowSecondaryHint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "showLangBar", {
+    name: "KARAOKE.ShowLangBar",
+    hint: "KARAOKE.ShowLangBarHint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.registerMenu(MODULE_ID, "manager", {
     name: "KARAOKE.OpenManager",
     label: "KARAOKE.OpenManagerLabel",

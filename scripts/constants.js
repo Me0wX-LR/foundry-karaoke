@@ -1,7 +1,7 @@
 export const MODULE_ID = "foundry-karaoke";
 export const FLAG_KEY = "track";
 export const SCHEMA = "foundry-karaoke";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 3;
 
 export const FONT_PRESETS = [
   { id: "signika", family: "Signika, sans-serif", label: "Signika (Foundry)", google: null },
@@ -13,6 +13,8 @@ export const FONT_PRESETS = [
   { id: "noto-sans", family: "\"Noto Sans\", sans-serif", label: "Noto Sans", google: "Noto+Sans:wght@400;700" },
   { id: "noto-sans-tc", family: "\"Noto Sans TC\", sans-serif", label: "Noto Sans TC (Traditional Chinese)", google: "Noto+Sans+TC:wght@400;700" },
   { id: "noto-sans-sc", family: "\"Noto Sans SC\", sans-serif", label: "Noto Sans SC (Simplified Chinese)", google: "Noto+Sans+SC:wght@400;700" },
+  { id: "noto-sans-jp", family: "\"Noto Sans JP\", sans-serif", label: "Noto Sans JP (Japanese)", google: "Noto+Sans+JP:wght@400;700" },
+  { id: "noto-sans-kr", family: "\"Noto Sans KR\", sans-serif", label: "Noto Sans KR (Korean)", google: "Noto+Sans+KR:wght@400;700" },
   { id: "georgia", family: "Georgia, serif", label: "Georgia", google: null },
   { id: "times", family: "\"Times New Roman\", Times, serif", label: "Times New Roman", google: null },
   { id: "arial", family: "Arial, Helvetica, sans-serif", label: "Arial", google: null },
@@ -20,6 +22,23 @@ export const FONT_PRESETS = [
   { id: "custom", family: "", label: "Custom family…", google: null },
   { id: "file", family: "FoundryKaraokeFont", label: "Uploaded font file…", google: null }
 ];
+
+export const LANGUAGE_PRESETS = [
+  { id: "zh-Hant", label: "Traditional Chinese", fontPreset: "noto-sans-tc" },
+  { id: "zh-Hans", label: "Simplified Chinese", fontPreset: "noto-sans-sc" },
+  { id: "ja", label: "Japanese", fontPreset: "noto-sans-jp" },
+  { id: "ko", label: "Korean", fontPreset: "noto-sans-kr" },
+  { id: "en", label: "English", fontPreset: "signika" }
+];
+
+export function defaultLanguage(index = 0) {
+  const preset = LANGUAGE_PRESETS[index] ?? {
+    id: `lang-${index + 1}`,
+    label: `Language ${index + 1}`,
+    fontPreset: "signika"
+  };
+  return { ...preset, lrc: "" };
+}
 
 export const LOCATION_PRESETS = [
   { id: "top", label: "Top", x: 50, y: 10 },
@@ -46,7 +65,15 @@ export function defaultDisplay() {
     maxWidth: 80,
     textAlign: "center",
     showPrevious: true,
-    showNext: true
+    showNext: true,
+    dualLanguage: false,
+    showSecondary: false,
+    mainLanguage: "zh-Hant",
+    secondaryLanguage: "ja",
+    referenceFontPreset: "noto-sans-jp",
+    referenceCustomFamily: "",
+    referenceScale: 55,
+    referenceColor: "#f3e5ab"
   };
 }
 
@@ -54,7 +81,9 @@ export function defaultTrack() {
   return {
     enabled: true,
     display: defaultDisplay(),
+    languages: [defaultLanguage(0)],
     lrc: "",
+    lrcRef: "",
     cues: []
   };
 }
