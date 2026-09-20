@@ -4,10 +4,13 @@ A Foundry Virtual Tabletop **v14** module that adds karaoke lyrics to **selected
 
 ## Install
 
-1. Copy this folder to `{User Data}/Data/modules/foundry-karaoke`.
-   The folder name must stay `foundry-karaoke`.
-2. Restart Foundry or reload the setup screen.
-3. Enable **Foundry Karaoke** in the world module list.
+In Foundry Setup → **Add-on Modules** → **Install Module**, paste this manifest URL:
+
+```
+https://github.com/Me0wX-LR/foundry-karaoke/releases/latest/download/module.json
+```
+
+Or copy the folder to `{User Data}/Data/modules/foundry-karaoke` (the folder name must stay `foundry-karaoke`), then reload Setup and enable **Foundry Karaoke** in the world.
 
 Typical Windows user data path:
 
