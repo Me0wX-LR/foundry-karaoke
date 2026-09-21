@@ -48,3 +48,4 @@ Hooks.once("ready", () => {
 
 Hooks.on("updatePlaylistSound", () => overlay.refresh());
 Hooks.on("updatePlaylist", () => overlay.refresh());
+Hooks.on(`${MODULE_ID}.refreshOverlay`, () => overlay.refresh());

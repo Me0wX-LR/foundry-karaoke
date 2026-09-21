@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./constants.js";
 import {
   canSeeOverlay,
-  clientLanguage,
+  canUseLanguageBar,
   cueText,
   findCueIndex,
   getTrack,
@@ -10,6 +10,7 @@ import {
   localize,
   mergeDisplay,
   playbackTime,
+  publishLiveLanguage,
   resolveFontFamily,
   resolveLanguageRoles,
   resolveLocation,
@@ -30,6 +31,7 @@ class KaraokeOverlay {
   #previewDisplay = null;
   #previewLines = null;
   #track = null;
+  #sound = null;
   #barHidden = false;
   #pos = { left: null, top: null };
   #drag = null;
@@ -147,6 +149,7 @@ class KaraokeOverlay {
 
     const track = getTrack(active);
     this.#track = track;
+    this.#sound = active;
     const time = playbackTime(active);
     const index = findCueIndex(track.cues, time);
     if (index < 0) {
@@ -154,8 +157,8 @@ class KaraokeOverlay {
       return;
     }
 
-    const roles = resolveLanguageRoles(track);
-    const visible = lineVisibility(track.display);
+    const roles = resolveLanguageRoles(track, active);
+    const visible = lineVisibility(track.display, track, active);
     const prevCue = visible.previous ? track.cues[index - 1] : null;
     const nextCue = visible.next ? track.cues[index + 1] : null;
     this.#render(
@@ -179,10 +182,10 @@ class KaraokeOverlay {
   }
 
   #render(display, prev, current, next, track = null) {
-    const roles = track ? resolveLanguageRoles(track) : null;
+    const roles = track ? resolveLanguageRoles(track, this.#sound) : null;
     ensureFonts(display, roles?.languages ?? []);
     const loc = resolveLocation(display);
-    const visible = lineVisibility(display);
+    const visible = lineVisibility(display, track, this.#sound);
     const showRef = Boolean(roles?.showSecondary ?? visible.reference);
     const size = Number(display.fontSize) || 42;
     const outline = Number(display.outlineWidth) || 0;
@@ -213,9 +216,10 @@ class KaraokeOverlay {
     const languages = track?.languages ?? [];
     const overlayOn = !this.#root.classList.contains("fk-hidden");
     const multi = languages.length > 1;
+    const allowed = canUseLanguageBar();
     const settingOn = !this.#barHidden;
-    const showBar = overlayOn && multi && settingOn;
-    const showRestore = overlayOn && multi && !settingOn;
+    const showBar = overlayOn && multi && allowed && settingOn;
+    const showRestore = overlayOn && multi && allowed && !settingOn;
     this.#bar.classList.toggle("fk-hidden", !showBar);
     this.#restore?.classList.toggle("fk-hidden", !showRestore);
     this.#applyBarPosition();
@@ -223,7 +227,7 @@ class KaraokeOverlay {
     const mainSelect = this.#bar.querySelector('select[data-role="main"]');
     const secondarySelect = this.#bar.querySelector('select[data-role="secondary"]');
     fillSelect(mainSelect, languages, roles.mainId, false);
-    fillSelect(secondarySelect, languages, roles.secondaryId || "off", true);
+    fillSelect(secondarySelect, languages, roles.secondaryChoice || "off", true);
   }
 
   #applyBarPosition() {
@@ -311,14 +315,16 @@ class KaraokeOverlay {
   #onBarChange = (event) => {
     const select = event.target.closest("select");
     if (!select || !this.#track) return;
+    const roles = resolveLanguageRoles(this.#track, this.#sound);
+    let mainId = roles.mainId;
+    let secondaryId = roles.secondaryChoice || "off";
     if (select.dataset.role === "main") {
-      const previousMain = resolveLanguageRoles(this.#track).mainId;
-      clientLanguage.mainId = select.value;
-      if (clientLanguage.secondaryId === select.value || resolveLanguageRoles(this.#track).secondaryId === select.value) {
-        clientLanguage.secondaryId = previousMain;
-      }
+      const previousMain = mainId;
+      mainId = select.value;
+      if (secondaryId === mainId) secondaryId = previousMain;
     }
-    if (select.dataset.role === "secondary") clientLanguage.secondaryId = select.value;
+    if (select.dataset.role === "secondary") secondaryId = select.value;
+    publishLiveLanguage(this.#sound, mainId, secondaryId);
     this.#tick();
   };
 
@@ -351,7 +357,7 @@ class KaraokeOverlay {
       return;
     }
     if (action !== "swap" || !this.#track) return;
-    swapClientLanguages(this.#track);
+    swapClientLanguages(this.#track, this.#sound);
     this.#tick();
   };
 

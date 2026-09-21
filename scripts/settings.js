@@ -17,6 +17,24 @@ export function registerSettings() {
     }
   });
 
+  game.settings.register(MODULE_ID, "playerLangBar", {
+    name: "KARAOKE.PlayerLangBar",
+    hint: "KARAOKE.PlayerLangBarHint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => Hooks.callAll(`${MODULE_ID}.refreshOverlay`)
+  });
+
+  game.settings.register(MODULE_ID, "liveLanguage", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+    onChange: () => Hooks.callAll(`${MODULE_ID}.refreshOverlay`)
+  });
+
   game.settings.register(MODULE_ID, "defaultFontPreset", {
     name: "KARAOKE.DefaultFont",
     scope: "world",

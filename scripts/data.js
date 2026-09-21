@@ -11,9 +11,61 @@ import {
 } from "./constants.js";
 
 export const clientLanguage = {
+  uuid: null,
   mainId: null,
   secondaryId: null
 };
+
+let liveLanguageWrite = Promise.resolve();
+
+export function canUseLanguageBar() {
+  if (game.user?.isGM) return true;
+  try {
+    return game.settings.get(MODULE_ID, "playerLangBar") === true;
+  } catch {
+    return false;
+  }
+}
+
+export function readLiveLanguage() {
+  try {
+    const raw = game.settings.get(MODULE_ID, "liveLanguage");
+    if (!raw) return null;
+    return typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    return null;
+  }
+}
+
+function liveLanguageFor(sound) {
+  const live = readLiveLanguage();
+  if (!live || !sound?.uuid || live.uuid !== sound.uuid) return null;
+  return live;
+}
+
+function localLanguageFor(sound) {
+  if (!canUseLanguageBar()) return null;
+  if (!clientLanguage.uuid || !sound?.uuid || clientLanguage.uuid !== sound.uuid) return null;
+  if (!clientLanguage.mainId && clientLanguage.secondaryId == null) return null;
+  return clientLanguage;
+}
+
+export function publishLiveLanguage(sound, mainId, secondaryId) {
+  clientLanguage.uuid = sound?.uuid ?? null;
+  clientLanguage.mainId = mainId ?? null;
+  clientLanguage.secondaryId = secondaryId ?? null;
+  if (!game.user?.isGM || !sound?.uuid) return liveLanguageWrite;
+  const payload = JSON.stringify({
+    uuid: sound.uuid,
+    mainId: mainId ?? "",
+    secondaryId: secondaryId ?? ""
+  });
+  liveLanguageWrite = liveLanguageWrite.then(async () => {
+    if (game.settings.get(MODULE_ID, "liveLanguage") === payload) return;
+    await game.settings.set(MODULE_ID, "liveLanguage", payload);
+  }).catch(() => {});
+  return liveLanguageWrite;
+}
 
 export function localize(key, data) {
   const full = key.startsWith("KARAOKE.") ? key : `KARAOKE.${key}`;
@@ -162,7 +214,15 @@ export function hasKaraoke(sound) {
 
 export async function setTrack(sound, data) {
   if (!sound) throw new Error("Missing playlist sound");
-  return sound.setFlag(MODULE_ID, FLAG_KEY, mergeTrack(data));
+  const merged = mergeTrack(data);
+  const result = await sound.setFlag(MODULE_ID, FLAG_KEY, merged);
+  if (game.user?.isGM && liveLanguageFor(sound)) {
+    const secondary = merged.display.showSecondary === false
+      ? "off"
+      : (merged.display.secondaryLanguage || "off");
+    publishLiveLanguage(sound, merged.display.mainLanguage, secondary);
+  }
+  return result;
 }
 
 export async function clearTrack(sound) {
@@ -195,17 +255,21 @@ export function cueText(cue, langId) {
   return cue.texts?.[langId] || cue.text || Object.values(cue.texts ?? {})[0] || "";
 }
 
-export function resolveLanguageRoles(track) {
+export function resolveLanguageRoles(track, sound = null) {
   const languages = track?.languages ?? [];
   const ids = languages.map((lang) => lang.id);
   const display = mergeDisplay(track?.display ?? {});
-  let mainId = clientLanguage.mainId || display.mainLanguage || ids[0];
-  let secondaryId = clientLanguage.secondaryId;
+  const local = localLanguageFor(sound);
+  const live = liveLanguageFor(sound);
+  const chosen = local || live;
+  let mainId = chosen?.mainId || display.mainLanguage || ids[0];
+  let secondaryId = chosen?.secondaryId;
   if (secondaryId == null) {
     secondaryId = display.showSecondary === false
       ? "off"
       : (display.secondaryLanguage || ids.find((id) => id !== mainId) || "off");
   }
+  if (secondaryId === "") secondaryId = "off";
   if (!ids.includes(mainId)) mainId = ids[0] || "";
   if (secondaryId && secondaryId !== "off" && !ids.includes(secondaryId)) {
     secondaryId = ids.find((id) => id !== mainId) || "off";
@@ -217,6 +281,7 @@ export function resolveLanguageRoles(track) {
   return {
     mainId,
     secondaryId: showSecondary ? secondaryId : "",
+    secondaryChoice: secondaryId === "off" ? "off" : secondaryId,
     showSecondary,
     languages,
     main: languages.find((lang) => lang.id === mainId) ?? languages[0] ?? null,
@@ -224,31 +289,29 @@ export function resolveLanguageRoles(track) {
   };
 }
 
-export function swapClientLanguages(track) {
-  const roles = resolveLanguageRoles({
-    ...track,
-    display: track.display
-  });
-  const currentMain = clientLanguage.mainId || roles.mainId;
-  const currentSecondary = clientLanguage.secondaryId == null ? roles.secondaryId : clientLanguage.secondaryId;
+export function swapClientLanguages(track, sound = null) {
+  const roles = resolveLanguageRoles(track, sound);
+  const currentMain = roles.mainId;
+  const currentSecondary = roles.secondaryChoice || "off";
   const other = (currentSecondary && currentSecondary !== "off")
     ? currentSecondary
     : (track.languages ?? []).map((lang) => lang.id).find((id) => id !== currentMain);
-  if (!other) return resolveLanguageRoles(track);
-  clientLanguage.mainId = other;
-  clientLanguage.secondaryId = currentMain || "";
-  return resolveLanguageRoles(track);
+  if (!other) return roles;
+  publishLiveLanguage(sound, other, currentMain || "off");
+  return resolveLanguageRoles(track, sound);
 }
 
-export function lineVisibility(display) {
+export function lineVisibility(display, track = null, sound = null) {
   const d = mergeDisplay(display);
   const clientPrev = game.settings.get(MODULE_ID, "showPreviousLine") !== false;
   const clientNext = game.settings.get(MODULE_ID, "showNextLine") !== false;
   const clientRef = game.settings.get(MODULE_ID, "showReferenceLine") !== false;
+  const roles = track ? resolveLanguageRoles(track, sound) : null;
+  const secondaryOff = roles ? !roles.showSecondary : false;
   return {
     previous: Boolean(d.showPrevious) && clientPrev,
     next: Boolean(d.showNext) && clientNext,
-    reference: Boolean(d.showSecondary ?? d.dualLanguage) && clientRef && clientLanguage.secondaryId !== "off"
+    reference: Boolean(d.showSecondary ?? d.dualLanguage) && clientRef && !secondaryOff
   };
 }
 

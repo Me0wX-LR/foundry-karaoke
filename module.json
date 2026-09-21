@@ -2,7 +2,7 @@
   "id": "foundry-karaoke",
   "title": "Foundry Karaoke",
   "description": "Add karaoke lyrics to selected Foundry playlist tracks. Pick font and on-screen location, then import or export the pack as JSON.",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "compatibility": {
     "minimum": "14",
     "verified": "14"

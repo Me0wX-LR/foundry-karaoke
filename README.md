@@ -28,7 +28,7 @@ Typical Windows user data path:
 5. Set **location** with presets (top / center / bottom / …) or drag the sample lyric on the stage. X/Y are percent of the screen.
 6. Add **languages** (Traditional Chinese, Japanese, English, …). Set **Main language** (large) and **Secondary language** (smaller, on top). During playback a language bar appears on the table. Drag the **grip** to move it, **−** to minimize it to a small icon, then drag that icon anywhere. Click the icon to expand.
 7. Choose whether **previous** and **next** lines appear for this track. Each player can also hide those lines in Configure Settings.
-8. Save, then play the playlist sound. Timed lines appear on the table for connected clients.
+8. Save, then play the playlist sound. Timed lines appear on the table for connected clients. Switching main / secondary from the GM language bar updates every client immediately. The language bar (and its circular icon) is **GM-only** unless **Players can use the language bar** is enabled in world settings.
 
 Right-click a playlist sound → **Edit Karaoke** jumps straight to that track.
 
@@ -186,13 +186,14 @@ Pair lines across languages with the same LRC timestamp, such as `[00:12.00]`.
 | Setting | Scope | Purpose |
 | --- | --- | --- |
 | Who sees karaoke | World | Everyone / GM only / players only |
+| Players can use the language bar | World | Off by default. If off, only the GM sees the bar or circle; players follow the GM’s live language choice |
 | Default font | World | Used for newly enabled tracks |
 | Default location | World | Used for newly enabled tracks |
 | Hide overlay | Client | Turns off lyrics on this computer |
 | Show previous line | Client | Hide the previous lyric locally |
 | Show next line | Client | Hide the next lyric locally |
 | Show secondary language | Client | Hide the smaller top line locally |
-| Show language toggle | Client | Show the full language bar; otherwise a small draggable icon |
+| Show language toggle | Client | GM (or opted-in players): show the full language bar; otherwise a small draggable icon |
 
 ## API
 
